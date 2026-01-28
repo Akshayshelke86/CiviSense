@@ -558,7 +558,7 @@ export default function MapView() {
                   center={center}
                   zoom={zoom}
                   style={{ height: '100%', width: '100%' }}
-                  whenCreated={onMapCreated}
+                  ref={mapRef}
                   zoomControl={false}
                   maxBounds={[[6.5, 68.1], [35.5, 97.4]]}
                   minZoom={4}

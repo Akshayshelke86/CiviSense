@@ -59,6 +59,7 @@ app.use(
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 const BASE_DIR = __dirname
 const UPLOADS_DIR = path.join(BASE_DIR, 'uploads')
@@ -378,10 +379,15 @@ app.post('/api/reports', protect, (req, res, next) => {
     try {
       const body = req.body || {}
 
-      // Get the photo URL (use first one if multiple provided)
-      let photo = null
+      // Get URLs for uploaded files
+      let photo_url = null
       if (req.files && req.files['photo'] && req.files['photo'].length > 0) {
-        photo = `${BACKEND_URL}/uploads/${path.basename(req.files['photo'][0].filename)}`
+        photo_url = `${BACKEND_URL}/uploads/${path.basename(req.files['photo'][0].filename)}`
+      }
+
+      let voice_note_url = null
+      if (req.files && req.files['voice_note'] && req.files['voice_note'].length > 0) {
+        voice_note_url = `${BACKEND_URL}/uploads/${path.basename(req.files['voice_note'][0].filename)}`
       }
 
       const reportPayload = {
@@ -393,7 +399,8 @@ app.post('/api/reports', protect, (req, res, next) => {
         name: body.name || null,
         address: body.address || null,
         email: body.email || null,
-        photo_url: photo,
+        photo_url,
+        voice_note_url,
       }
 
       if (req.user && mongoose.Types.ObjectId.isValid(req.user._id)) {

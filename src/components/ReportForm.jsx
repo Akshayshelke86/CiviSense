@@ -101,7 +101,6 @@ export default function ReportForm({ onAddReport }) {
   })
 
   const [mapCenter, setMapCenter] = useState(null)
-
   const setField = (k, v) => setFormData((s) => ({ ...s, [k]: v }))
   const handleInputChange = (e) => setField(e.target.name, e.target.value)
 
@@ -123,6 +122,46 @@ export default function ReportForm({ onAddReport }) {
     const files = Array.from(e.target.files || [])
     const toAdd = files.filter(f => f.size <= MAX_IMAGE_BYTES).map(f => ({ file: f, url: URL.createObjectURL(f) }))
     setImages(prev => [...prev, ...toAdd].slice(0, MAX_IMAGE_COUNT))
+  }
+
+  const [isRecording, setIsRecording] = useState(false)
+  const [audioBlob, setAudioBlob] = useState(null)
+  const [audioUrl, setAudioUrl] = useState(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaRecorderRef.current = new MediaRecorder(stream)
+      audioChunksRef.current = []
+
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        setAudioBlob(blob)
+        setAudioUrl(URL.createObjectURL(blob))
+        stream.getTracks().forEach(t => t.stop())
+      }
+
+      mediaRecorderRef.current.start()
+      setIsRecording(true)
+      setStatusMsg('Recording audio...')
+    } catch (err) {
+      console.error('Recording error:', err)
+      setStatusMsg('Microphone access denied or error.')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      setStatusMsg('Audio captured.')
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -152,6 +191,10 @@ export default function ReportForm({ onAddReport }) {
 
     const fd = new FormData()
     images.forEach(i => fd.append('photo', i.file))
+    if (audioBlob) {
+      fd.append('voice_note', audioBlob, 'voice_note.webm')
+    }
+
     Object.keys(formData).forEach(k => {
       if (formData[k] != null) fd.append(k, formData[k])
     })
@@ -169,7 +212,7 @@ export default function ReportForm({ onAddReport }) {
         setStatusMsg('Success! Report submitted.')
         onAddReport?.(await res.json())
         setFormData({ contact: '', name: user?.name || '', complaintType: '', location: '', address: '', comment: '', email: user?.email || '', captchaInput: '', lat: null, lng: null })
-        setImages([]); setCaptcha(generateCaptcha())
+        setImages([]); setAudioBlob(null); setAudioUrl(null); setCaptcha(generateCaptcha())
       } else {
         setStatusMsg('Submission failed. Check your data.')
       }
@@ -327,7 +370,19 @@ export default function ReportForm({ onAddReport }) {
                   <h3 className="font-bold text-slate-800 text-sm">Voice Testimony</h3>
                 </div>
                 <p className="text-[10px] text-slate-400 mb-4 font-medium leading-relaxed italic">Record an audio snippet describing the urgency or context of the report.</p>
-                <button type="button" className="w-full py-4 rounded-2xl bg-white border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-900 hover:text-white hover:border-black transition-all shadow-sm">Start Audio Log</button>
+                {isRecording ? (
+                  <button type="button" onClick={stopRecording} className="w-full py-4 rounded-2xl bg-rose-600 text-white font-black text-[10px] uppercase tracking-[0.2em] animate-pulse shadow-lg shadow-rose-200">Stop Recording</button>
+                ) : (
+                  <button type="button" onClick={startRecording} className="w-full py-4 rounded-2xl bg-white border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-900 hover:text-white hover:border-black transition-all shadow-sm">
+                    {audioUrl ? 'Re-record Audio' : 'Start Audio Log'}
+                  </button>
+                )}
+                {audioUrl && !isRecording && (
+                  <div className="mt-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 animate-in fade-in zoom-in-95">
+                    <p className="text-[9px] font-black uppercase text-indigo-400 mb-2">Voice Preview</p>
+                    <audio src={audioUrl} controls className="w-full h-8" />
+                  </div>
+                )}
               </div>
             </section>
 

@@ -870,6 +870,16 @@ export default function AdminDashboard() {
                   <div className="text-sm text-orange-700">{openReport.quarantine_reason}</div>
                 </>
               )}
+
+              {openReport.voice_note_url && (
+                <div className="mt-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                  <p className="text-[10px] font-black uppercase text-indigo-400 mb-2 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                    Voice Testimony
+                  </p>
+                  <audio src={buildImageSrc(openReport.voice_note_url)} controls className="w-full h-8" />
+                </div>
+              )}
             </div>
 
             <div>

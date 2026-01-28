@@ -222,7 +222,7 @@ export default function ReportMap({
         center={center}
         zoom={markerList.length ? zoom : 7}
         style={style}
-        whenCreated={(map) => { mapRef.current = map }}
+        ref={mapRef}
         scrollWheelZoom={false}
         attributionControl={true}
         maxBounds={[[15.0, 72.0], [22.5, 81.5]]}
